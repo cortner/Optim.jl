@@ -2,11 +2,11 @@ function assess_convergence(x::Array,
                             x_previous::Array,
                             f_x::Real,
                             f_x_previous::Real,
-                            gr::Array,
+                            g::Array,
                             x_tol::Real,
                             f_tol::Real,
                             g_tol::Real)
-    x_converged, f_converged, gr_converged = false, false, false
+    x_converged, f_converged, g_converged = false, false, false
 
     if maxdiff(x, x_previous) < x_tol
         x_converged = true
@@ -19,11 +19,11 @@ function assess_convergence(x::Array,
         f_converged = true
     end
 
-    if norm(vec(gr), Inf) < g_tol
-        gr_converged = true
+    if norm(vec(g), Inf) < g_tol
+        g_converged = true
     end
 
-    converged = x_converged || f_converged || gr_converged
+    converged = x_converged || f_converged || g_converged
 
-    return x_converged, f_converged, gr_converged, converged
+    return x_converged, f_converged, g_converged, converged
 end

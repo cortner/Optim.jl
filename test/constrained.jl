@@ -4,10 +4,10 @@ using Base.Test
 # Quadratic objective function
 # For (A*x-b)^2/2
 function quadratic!(x, g, AtA, Atb, tmp)
-    calc_grad = !(g === nothing)
+    calc_g = !(g === nothing)
     A_mul_B!(tmp, AtA, x)
     v = dot(x,tmp)/2 + dot(Atb,x)
-    if calc_grad
+    if calc_g
         for i = 1:length(g)
             g[i] = tmp[i] + Atb[i]
         end

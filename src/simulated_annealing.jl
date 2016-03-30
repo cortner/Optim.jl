@@ -17,11 +17,11 @@ macro satrace()
             if o.extended_trace
                 dt["x"] = copy(x)
             end
-            grnorm = NaN
+            g_norm = NaN
             update!(tr,
                     iteration,
                     f_x,
-                    grnorm,
+                    g_norm,
                     dt,
                     o.store_trace,
                     o.show_trace,
@@ -55,7 +55,7 @@ function optimize{T}(cost::Function,
     # Record the number of iterations we perform
     iteration = 0
 
-    # Track calls to function and gradient
+    # Track calls to function
     f_calls = 0
 
     # Count number of parameters

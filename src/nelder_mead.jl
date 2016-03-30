@@ -27,11 +27,11 @@ macro nmtrace()
             if o.extended_trace
                 dt["x"] = copy(x)
             end
-            grnorm = NaN
+            g_norm = NaN
             update!(tr,
                     iteration,
                     f_x,
-                    grnorm,
+                    g_norm,
                     dt,
                     o.store_trace,
                     o.show_trace,

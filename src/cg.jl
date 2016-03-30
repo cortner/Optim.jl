@@ -86,14 +86,14 @@ macro cgtrace()
             dt = Dict()
             if o.extended_trace
                 dt["x"] = copy(x)
-                dt["g(x)"] = copy(gr)
+                dt["g(x)"] = copy(g)
                 dt["Current step size"] = alpha
             end
-            grnorm = norm(gr[:], Inf)
+            g_norm = norm(g[:], Inf)
             update!(tr,
                     iteration,
                     f_x,
-                    grnorm,
+                    g_norm,
                     dt,
                     o.store_trace,
                     o.show_trace,
@@ -137,30 +137,30 @@ function optimize{T}(df::DifferentiableFunction,
     # Count number of parameters
     n = length(x)
 
-    # Maintain current gradient in gr and previous gradient in gr_previous
-    gr, gr_previous = similar(x), similar(x)
+    # Maintain current gradient in g and previous gradient in g_previous
+    g, g_previous = similar(x), similar(x)
 
-    # Maintain the preconditioned gradient in pgr
-    pgr = similar(x)
+    # Maintain the preconditioned gradient in pg
+    pg = similar(x)
 
     # The current search direction
     s = similar(x)
 
     # Buffers for use in line search
-    x_ls, gr_ls = similar(x), similar(x)
+    x_ls, g_ls = similar(x), similar(x)
 
     # Intermediate value in CG calculation
     y = similar(x)
 
     # Store f(x) in f_x
-    f_x = df.fg!(x, gr)
+    f_x = df.fg!(x, g)
     @assert typeof(f_x) == T
     f_x_previous = convert(T, NaN)
     f_calls, g_calls = f_calls + 1, g_calls + 1
-    copy!(gr_previous, gr)
+    copy!(g_previous, g)
 
     # Keep track of step-sizes
-    alpha = alphainit(one(T), x, gr, f_x)
+    alpha = alphainit(one(T), x, g, f_x)
 
     # TODO: How should this flag be set?
     mayterminate = false
@@ -177,19 +177,19 @@ function optimize{T}(df::DifferentiableFunction,
     if !isfinite(f_x)
         error("Must have finite starting value")
     end
-    if !all(isfinite(gr))
-        @show gr
-        @show find(!isfinite(gr))
+    if !all(isfinite(g))
+        @show g
+        @show find(!isfinite(g))
         error("Gradient must have all finite values at starting point")
     end
 
     # Determine the intial search direction
     cg.precondprep(cg.P, x)
-    cg_precondfwd(s, cg.P, gr)
+    cg_precondfwd(s, cg.P, g)
     scale!(s, -1)
 
     # Assess multiple types of convergence
-    x_converged, f_converged, gr_converged = false, false, false
+    x_converged, f_converged, g_converged = false, false, false
 
     # Iterate until convergence
     converged = false
@@ -198,12 +198,12 @@ function optimize{T}(df::DifferentiableFunction,
         iteration += 1
 
         # Reset the search direction if it becomes corrupted
-        dphi0 = vecdot(gr, s)
+        dphi0 = vecdot(g, s)
         if dphi0 >= 0
             @simd for i in 1:n
-                @inbounds s[i] = -gr[i]
+                @inbounds s[i] = -g[i]
             end
-            dphi0 = vecdot(gr, s)
+            dphi0 = vecdot(g, s)
             if dphi0 < 0
                 break
             end
@@ -217,12 +217,12 @@ function optimize{T}(df::DifferentiableFunction,
 
         # Pick the initial step size (HZ #I1-I2)
         alpha, mayterminate, f_update, g_update =
-          alphatry(alpha, df, x, s, x_ls, gr_ls, lsr)
+          alphatry(alpha, df, x, s, x_ls, g_ls, lsr)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
         # Determine the distance of movement along the search line
         alpha, f_update, g_update =
-          cg.linesearch!(df, x, s, x_ls, gr_ls, lsr, alpha, mayterminate)
+          cg.linesearch!(df, x, s, x_ls, g_ls, lsr, alpha, mayterminate)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
         # Maintain a record of previous position
@@ -232,20 +232,20 @@ function optimize{T}(df::DifferentiableFunction,
         LinAlg.axpy!(alpha, s, x)
 
         # Maintain a record of the previous gradient
-        copy!(gr_previous, gr)
+        copy!(g_previous, g)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, df.fg!(x, gr)
+        f_x_previous, f_x = f_x, df.fg!(x, g)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         x_converged,
         f_converged,
-        gr_converged,
+        g_converged,
         converged = assess_convergence(x,
                                        x_previous,
                                        f_x,
                                        f_x_previous,
-                                       gr,
+                                       g,
                                        o.x_tol,
                                        o.f_tol,
                                        o.g_tol)
@@ -259,17 +259,17 @@ function optimize{T}(df::DifferentiableFunction,
         #  Calculate the beta factor (HZ2012)
         cg.precondprep(cg.P, x)
         dPd = cg_precondinvdot(s, cg.P, s)
-        etak::T = cg.eta * vecdot(s, gr_previous) / dPd
+        etak::T = cg.eta * vecdot(s, g_previous) / dPd
         @simd for i in 1:n
-            @inbounds y[i] = gr[i] - gr_previous[i]
+            @inbounds y[i] = g[i] - g_previous[i]
         end
         ydots = vecdot(y, s)
-        cg_precondfwd(pgr, cg.P, gr)
-        betak = (vecdot(y, pgr) - cg_precondfwddot(y, cg.P, y) *
-                 vecdot(gr, s) / ydots) / ydots
+        cg_precondfwd(pg, cg.P, g)
+        betak = (vecdot(y, pg) - cg_precondfwddot(y, cg.P, y) *
+                 vecdot(g, s) / ydots) / ydots
         beta = max(betak, etak)
         @simd for i in 1:n
-            @inbounds s[i] = beta * s[i] - pgr[i]
+            @inbounds s[i] = beta * s[i] - pg[i]
         end
 
         @cgtrace
@@ -285,7 +285,7 @@ function optimize{T}(df::DifferentiableFunction,
                                            o.x_tol,
                                            f_converged,
                                            o.f_tol,
-                                           gr_converged,
+                                           g_converged,
                                            o.g_tol,
                                            tr,
                                            f_calls,

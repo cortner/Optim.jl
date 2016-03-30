@@ -4,14 +4,14 @@ macro newtontrace()
             dt = Dict()
             if o.extended_trace
                 dt["x"] = copy(x)
-                dt["g(x)"] = copy(gr)
+                dt["g(x)"] = copy(g)
                 dt["h(x)"] = copy(H)
             end
-            grnorm = norm(gr, Inf)
+            gnorm = norm(g, Inf)
             update!(tr,
                     iteration,
                     f_x,
-                    grnorm,
+                    gnorm,
                     dt,
                     o.store_trace,
                     o.show_trace,
@@ -54,18 +54,18 @@ function optimize{T}(d::TwiceDifferentiableFunction,
     # Count number of parameters
     n = length(x)
 
-    # Maintain current gradient in gr
-    gr = Array(T, n)
+    # Maintain current gradient in g
+    g = Array(T, n)
 
     # The current search direction
     # TODO: Try to avoid re-allocating s
     s = Array(T, n)
 
     # Buffers for use in line search
-    x_ls, gr_ls = Array(T, n), Array(T, n)
+    x_ls, g_ls = Array(T, n), Array(T, n)
 
     # Store f(x) in f_x
-    f_x_previous, f_x = NaN, d.fg!(x, gr)
+    f_x_previous, f_x = NaN, d.fg!(x, g)
     f_calls, g_calls = f_calls + 1, g_calls + 1
 
     # Store h(x) in H
@@ -73,7 +73,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
     d.h!(x, H)
 
     # Keep track of step-sizes
-    alpha = alphainit(one(T), x, gr, f_x)
+    alpha = alphainit(one(T), x, g, f_x)
 
     # TODO: How should this flag be set?
     mayterminate = false
@@ -87,7 +87,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
     @newtontrace
 
     # Assess multiple types of convergence
-    x_converged, f_converged, gr_converged = false, false, false
+    x_converged, f_converged, g_converged = false, false, false
 
     # Iterate until convergence
     converged = false
@@ -97,16 +97,16 @@ function optimize{T}(d::TwiceDifferentiableFunction,
 
         # Search direction is always the negative gradient divided by H
         # TODO: Do this calculation in place
-        @inbounds s[:] = -(H \ gr)
+        @inbounds s[:] = -(H \ g)
 
         # Refresh the line search cache
-        dphi0 = vecdot(gr, s)
+        dphi0 = vecdot(g, s)
         clear!(lsr)
         push!(lsr, zero(T), f_x, dphi0)
 
         # Determine the distance of movement along the search line
         alpha, f_update, g_update =
-          mo.linesearch!(d, x, s, x_ls, gr_ls, lsr, alpha, mayterminate)
+          mo.linesearch!(d, x, s, x_ls, g_ls, lsr, alpha, mayterminate)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
         # Maintain a record of previous position
@@ -116,7 +116,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
         LinAlg.axpy!(alpha, s, x)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, d.fg!(x, gr)
+        f_x_previous, f_x = f_x, d.fg!(x, g)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         # Update the Hessian
@@ -124,12 +124,12 @@ function optimize{T}(d::TwiceDifferentiableFunction,
 
         x_converged,
         f_converged,
-        gr_converged,
+        g_converged,
         converged = assess_convergence(x,
                                        x_previous,
                                        f_x,
                                        f_x_previous,
-                                       gr,
+                                       g,
                                        o.x_tol,
                                        o.f_tol,
                                        o.g_tol)
@@ -147,7 +147,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
                                            o.x_tol,
                                            f_converged,
                                            o.f_tol,
-                                           gr_converged,
+                                           g_converged,
                                            o.g_tol,
                                            tr,
                                            f_calls,
