@@ -40,7 +40,7 @@ function twoloop!(s::Vector,
     # Copy q into s for forward pass
     # apply preconditioner if precon != nothing
     # (Note: preconditioner update was done outside of this function)
-    precondfwd!(s, precon, q)
+    A_ldiv_B!(s, precon, q)
 
     # Forward pass
     for index in lower:1:upper
@@ -164,7 +164,7 @@ function optimize{T}(d::DifferentiableFunction,
 
         # update the preconditioner
         mo.precondprep!(mo.P, x)
-        
+
         # Determine the L-BFGS search direction
         twoloop!(s, gr, rho, dx_history, dgr_history, mo.m, pseudo_iteration,
                  twoloop_alpha, twoloop_q, mo.P)
