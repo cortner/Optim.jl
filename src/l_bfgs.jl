@@ -172,11 +172,10 @@ function optimize{T}(d::DifferentiableFunction,
 
         # Refresh the line search cache
         dphi0 = vecdot(gr, s)
-        if dphi0 > 0.0
+        if dphi0 >= 0.0
             pseudo_iteration = 1
-            @simd for i in 1:n
-                @inbounds s[i] = -gr[i]
-            end
+            A_ldiv_B!(s, mo.P, gr)
+            scale!(s, -1.0)
             dphi0 = vecdot(gr, s)
         end
 
@@ -184,8 +183,19 @@ function optimize{T}(d::DifferentiableFunction,
         push!(lsr, zero(T), f_x, dphi0)
 
         # Determine the distance of movement along the search line
+        if iteration > 1
+           alphaguess = 2.0 * (f_x - f_x_previous) / dphi0
+           alphaguess = max(alphaguess, alpha/4.0)
+           alphaguess = min(alphaguess, 1.0)
+           if alphaguess > 0.75
+               alphaguess = 1.0
+           end
+        else
+            alphaguess = 1.0
+        end
+
         alpha, f_update, g_update =
-          mo.linesearch!(d, x, s, x_ls, g_ls, lsr, alpha, mayterminate)
+          mo.linesearch!(d, x, s, x_ls, g_ls, lsr, alphaguess, mayterminate)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
         # Maintain a record of previous position

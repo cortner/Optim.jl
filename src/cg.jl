@@ -93,6 +93,14 @@ function ConjugateGradient(;
                                  linesearch!)
 end
 
+
+function alphatry_quad(alphaold, fold, fstart, fprimestart)
+   alpha = 2.0 * (fstart - fold) / fprimestart  # NW, Eq. (3.60)
+   alpha = max(alpha, alphaold / 10.0)
+   alpha = min(alpha, alphaold * 4.0)
+   return alpha
+end
+
 function optimize{T}(df::DifferentiableFunction,
                      initial_x::Array{T},
                      mo::ConjugateGradient,
@@ -184,6 +192,7 @@ function optimize{T}(df::DifferentiableFunction,
             end
             dphi0 = vecdot(g, s)
             if dphi0 >= 0
+                warning("CG is terminating because `-pg` is no longer a numerical descent direction")
                 break
             end
         end
@@ -199,10 +208,16 @@ function optimize{T}(df::DifferentiableFunction,
           alphatry(alpha, df, x, s, x_ls, g_ls, lsr)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
+      #   if iteration > 1
+      #    alpha = alphatry_quad(alpha, f_x_previous, f_x, dphi0)
+      #    print("try: "); @show alpha
+      #   end
+
         # Determine the distance of movement along the search line
         alpha, f_update, g_update =
           mo.linesearch!(df, x, s, x_ls, g_ls, lsr, alpha, mayterminate)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
+
 
         # Maintain a record of previous position
         copy!(x_previous, x)
