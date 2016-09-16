@@ -195,7 +195,7 @@ function optimize{T}(d::DifferentiableFunction,
         end
 
         alpha, f_update, g_update =
-          mo.linesearch!(d, x, s, x_ls, g_ls, lsr, alphaguess, mayterminate)
+          mo.linesearch!(d, x, s, f_x, gr, x_ls, g_ls, lsr, alphaguess, mayterminate)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
         # Maintain a record of previous position

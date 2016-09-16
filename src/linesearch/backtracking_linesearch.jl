@@ -3,18 +3,22 @@ quadbt_linesearch!{T}(d::Union{DifferentiableFunction,
                                               TwiceDifferentiableFunction},
                                      x::Vector{T},
                                      s::Vector,
+                                     f_x,
+                                     gr,
                                      x_scratch::Vector,
                                      gr_scratch::Vector,
                                      lsr::LineSearchResults,
                                      alpha::Real = 1.0,
                                      mayterminate::Bool = false,
-                                     c1::Real = 0.1,
+                                     c1::Real = 0.2,
                                      c2::Real = 0.9,
                                      rho=0.9,
                                      iterations::Integer = 1_000) =
     backtracking_linesearch!(d,
                                          x,
                                          s,
+                                         f_x,
+                                         gr,
                                          x_scratch,
                                          gr_scratch,
                                          lsr,
@@ -31,6 +35,8 @@ function backtracking_linesearch!{T}(d::Union{DifferentiableFunction,
                                               TwiceDifferentiableFunction},
                                      x::Vector{T},
                                      s::Vector,
+                                     f_x,
+                                     gr,
                                      x_scratch::Vector,
                                      gr_scratch::Vector,
                                      lsr::LineSearchResults,
@@ -63,12 +69,12 @@ function backtracking_linesearch!{T}(d::Union{DifferentiableFunction,
     n = length(x)
 
     # Store f(x) in f_x
-    f_x = d.fg!(x, gr_scratch)
-    f_calls += 1
-    g_calls += 1
+   #  f_x = d.fg!(x, gr_scratch)
+   #  f_calls += 1
+   #  g_calls += 1
 
     # Store angle between search direction and gradient
-    gxp = vecdot(gr_scratch, s)
+    gxp = vecdot(gr, s)
 
     # Tentatively move a distance of alpha in the direction of s
     @simd for i in 1:n

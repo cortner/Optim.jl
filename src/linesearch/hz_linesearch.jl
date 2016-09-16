@@ -158,6 +158,8 @@ function hz_linesearch!{T}(df::Union{DifferentiableFunction,
                                      TwiceDifferentiableFunction},
                            x::Array{T},
                            s::Array,
+                           f_x_cur__,     # just for compatiblity
+                           g_cur__,       # just for compatibility 
                            xtmp::Array,
                            g::Array,
                            lsr::LineSearchResults{T},

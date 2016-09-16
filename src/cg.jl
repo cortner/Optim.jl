@@ -215,7 +215,7 @@ function optimize{T}(df::DifferentiableFunction,
 
         # Determine the distance of movement along the search line
         alpha, f_update, g_update =
-          mo.linesearch!(df, x, s, x_ls, g_ls, lsr, alpha, mayterminate)
+          mo.linesearch!(df, x, s, f_x, g, x_ls, g_ls, lsr, alpha, mayterminate)
         f_calls, g_calls = f_calls + f_update, g_calls + g_update
 
 
