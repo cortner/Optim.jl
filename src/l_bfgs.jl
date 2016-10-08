@@ -187,7 +187,7 @@ function optimize{T}(d::DifferentiableFunction,
            alphaguess = 2.0 * (f_x - f_x_previous) / dphi0
            alphaguess = max(alphaguess, alpha/4.0)
            alphaguess = min(alphaguess, 1.0)
-           if alphaguess > 0.75
+           if (alphaguess > 0.75 && alphaguess < 1/0.75)
                alphaguess = 1.0
            end
         else
