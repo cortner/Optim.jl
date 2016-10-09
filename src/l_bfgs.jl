@@ -147,9 +147,20 @@ function update_state!{T}(d, state::LBFGSState{T}, method::LBFGS)
     push!(state.lsr, zero(T), state.f_x, dphi0)
 
     # Determine the distance of movement along the search line
+    if state.pseudo_iteration > 1
+      alphaguess = 2.0 * (state.f_x - state.f_x_previous) / dphi0
+      alphaguess = max(alphaguess, alpha/4.0)  # not too much reduction
+      if 0.75 < alphaguess < 1.3333  # if alphaguess ~ 1, then make it 1 (Newton)
+           alphaguess = 1.0
+      end
+    else
+        alphaguess = 1.0     # on first iteration make alphaguess = 1
+    end
+
+    # Determine the distance of movement along the search line
     state.alpha, f_update, g_update =
       method.linesearch!(d, state.x, state.s, state.x_ls, state.g_ls, state.lsr,
-                     state.alpha, state.mayterminate)
+                     alphaguess, state.mayterminate)
     state.f_calls, state.g_calls = state.f_calls + f_update, state.g_calls + g_update
 
     # Maintain a record of previous position
