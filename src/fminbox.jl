@@ -100,9 +100,6 @@ function precondprepbox!(P, x, l, u, mu)
     end
 end
 
-const PARAMETERS_MU = one64<<display_nextbit
-display_nextbit += 1
-
 immutable Fminbox <: Optimizer end
 
 function optimize{T<:AbstractFloat}(
@@ -120,7 +117,7 @@ function optimize{T<:AbstractFloat}(
         extended_trace::Bool = false,
         callback = nothing,
         show_every = 1,
-        linesearch!::Function = hz_linesearch!,
+        linesearch!::Function = LineSearches.hagerzhang!,
         eta::Real = convert(T,0.4),
         mu0::T = convert(T, NaN),
         mufactor::T = convert(T, 0.001),
@@ -201,7 +198,7 @@ function optimize{T<:AbstractFloat}(
         else
             append!(results, resultsnew)
         end
-        copy!(x, results.minimum)
+        copy!(x, minimizer(results))
         if show_trace > 0
             println("x: ", x)
         end
@@ -214,12 +211,12 @@ function optimize{T<:AbstractFloat}(
             @inbounds g[i] = gfunc[i] + mu*gbarrier[i]
         end
 
-        x_converged, f_converged, g_converged, converged = assess_convergence(x, xold, results.f_minimum, fval0, g, x_tol, f_tol, g_tol)
+        x_converged, f_converged, g_converged, converged = assess_convergence(x, xold, minimum(results), fval0, g, x_tol, f_tol, g_tol)
 
     end
-    results.method = "Fminbox with $(results.method)"
+    results.method = "Fminbox with $(method(results))"
     results.iterations = iteration
     results.initial_x = initial_x
-    results.f_minimum = df.f(results.minimum)
+    results.minimum = df.f(minimizer(results))
     results
 end

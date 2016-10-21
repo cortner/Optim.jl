@@ -68,7 +68,7 @@ immutable LBFGS{T} <: Optimizer
     extrapolate::Bool
 end
 
-LBFGS(; m::Integer = 10, linesearch!::Function = hz_linesearch!,
+LBFGS(; m::Integer = 10, linesearch!::Function = LineSearches.hagerzhang!,
       P=nothing, precondprep! = (P, x) -> nothing, extrapolate::Bool=false) =
     LBFGS(Int(m), linesearch!, P, precondprep!, extrapolate)
 
@@ -144,7 +144,7 @@ function update_state!{T}(d, state::LBFGSState{T}, method::LBFGS)
         dphi0 = vecdot(state.g, state.s)
     end
 
-    clear!(state.lsr)
+    LineSearches.clear!(state.lsr)
     push!(state.lsr, zero(T), state.f_x, dphi0)
 
     # compute an initial guess for the linesearch
