@@ -2,6 +2,7 @@
 import LineSearches
 using JuLIP, JuLIP.Potentials, JuLIP.ASE
 import JuLIP.Preconditioners.update!
+using PyCall
 
 let
    methods = [ LBFGS(), ConjugateGradient(),
@@ -44,7 +45,7 @@ let
    println("--------------------------------------")
    println("JuLIP Example (preconditioned): ")
    println("--------------------------------------")
-   at = bulk("Si", cubic=true) * 3
+   at = bulk("Si", cubic=true) * 5
    X = positions(at); n = length(at) ÷ 2
    at = extend!(at, Atoms( "Si", [0.5*(X[n]+X[n+1])] ))
    set_constraint!(at, FixedCell(at))
@@ -64,15 +65,23 @@ let
 
    objective = DifferentiableFunction( x->energy(at, x),
                                        (x,g)->copy!(g, gradient(at, x)) )
-   GRTOL = 1e-5
    x0 = dofs(at)
    for (method, msg) in zip(methods, msgs)
       results = Optim.optimize(objective, copy(x0), method=method)
       println(msg, "g_calls = ", results.g_calls, ", f_calls = ", results.f_calls)
    end
 
+   # println("--------------------------------------")
+   # println("JuLIP Example with  Kumagai: ")
+   # println("--------------------------------------")
+   # si64 = bulk("Si", cubic=true) * 8
+   # @pyimport atomistica
+   # kumagai = ASECalculator(atomistica.Kumagai())
+   # rattle!(si64, 0.1)
+   # p = positions(si64)
+   # int = ASEAtoms("Si", [(p[1] + p[2])/2])
+   # si64 = extend!(si64, int)
+   # set_calculator!(si64, kumagai)
+   # set_constraint!(si64, FixedCell(si64))
+   # JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64))
 end
-
-
-# * Objective Function Calls: 73
-# * Gradient Calls: 34
