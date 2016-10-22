@@ -71,17 +71,20 @@ let
       println(msg, "g_calls = ", results.g_calls, ", f_calls = ", results.f_calls)
    end
 
-   # println("--------------------------------------")
-   # println("JuLIP Example with  Kumagai: ")
-   # println("--------------------------------------")
-   # si64 = bulk("Si", cubic=true) * 8
-   # @pyimport atomistica
-   # kumagai = ASECalculator(atomistica.Kumagai())
-   # rattle!(si64, 0.1)
-   # p = positions(si64)
-   # int = ASEAtoms("Si", [(p[1] + p[2])/2])
-   # si64 = extend!(si64, int)
-   # set_calculator!(si64, kumagai)
-   # set_constraint!(si64, FixedCell(si64))
-   # JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64))
+   println("--------------------------------------")
+   println("JuLIP Example with  Kumagai: ")
+   println("--------------------------------------")
+   si64 = bulk("Si", cubic=true) * 8
+   @pyimport atomistica
+   kumagai = ASECalculator(atomistica.Kumagai())
+   rattle!(si64, 0.1)
+   p = positions(si64)
+   int = ASEAtoms("Si", [(p[1] + p[2])/2])
+   si64 = extend!(si64, int)
+   set_calculator!(si64, kumagai)
+   set_constraint!(si64, FixedCell(si64))
+   X0 = positions(si64)
+   JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64), method=:auto)
+   set_positions!(si64, X0)
+   JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64), method=:lbfgs)
 end
