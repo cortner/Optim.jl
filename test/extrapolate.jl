@@ -1,5 +1,7 @@
 
 import LineSearches
+using JuLIP, JuLIP.Potentials, JuLIP.ASE
+import JuLIP.Preconditioners.update!
 
 let
    methods = [ LBFGS(), ConjugateGradient(),
@@ -38,4 +40,39 @@ let
       results = Optim.optimize(df, copy(initial_x), method=method)
       println(msg, "g_calls = ", results.g_calls, ", f_calls = ", results.f_calls)
    end
+
+   println("--------------------------------------")
+   println("JuLIP Example (preconditioned): ")
+   println("--------------------------------------")
+   at = bulk("Si", cubic=true) * 3
+   X = positions(at); n = length(at) ÷ 2
+   at = extend!(at, Atoms( "Si", [0.5*(X[n]+X[n+1])] ))
+   set_constraint!(at, FixedCell(at))
+   set_calculator!(at, StillingerWeber())
+   rattle!(at, 0.1)
+   P = JuLIP.Preconditioners.Exp(at)
+   methods = [ LBFGS(P=P, precondprep! = (P, x) -> update!(P, at, x)),
+               ConjugateGradient(P=P, precondprep! = (P, x) -> update!(P, at, x)),
+               LBFGS(P=P, precondprep! = (P, x) -> update!(P, at, x),
+                     extrapolate=true, linesearch! = LineSearches.interpbacktrack!),
+               ConjugateGradient(P=P, precondprep! = (P, x) -> update!(P, at, x),
+                              linesearch! = LineSearches.interpbacktrack!),
+                      ]
+    msgs = ["LBFGS Default Options: ",  "CG Default Options: ",
+           "LBFGS + Backtracking + Extrapolation: ",
+           "CG + Backtracking:  " ]
+
+   objective = DifferentiableFunction( x->energy(at, x),
+                                       (x,g)->copy!(g, gradient(at, x)) )
+   GRTOL = 1e-5
+   x0 = dofs(at)
+   for (method, msg) in zip(methods, msgs)
+      results = Optim.optimize(objective, copy(x0), method=method)
+      println(msg, "g_calls = ", results.g_calls, ", f_calls = ", results.f_calls)
+   end
+
 end
+
+
+# * Objective Function Calls: 73
+# * Gradient Calls: 34
