@@ -6,9 +6,11 @@ using PyCall
 
 let
    methods = [ LBFGS(), ConjugateGradient(),
-               LBFGS(extrapolate=true, linesearch! = LineSearches.interpbacktrack!) ]
+               LBFGS(extrapolate=true, linesearch! = LineSearches.interpbacktrack!),
+               LBFGS(extrapolate=false, linesearch! = LineSearches.interpbacktrack!) ]
    msgs = ["LBFGS Default Options: ",  "CG Default Options: ",
-          "LBFGS + Backtracking + Extrapolation: " ]
+          "LBFGS + Backtracking + Extrapolation: ",
+          "LBFGS + Backtracking: " ]
 
    println("--------------------")
    println("Rosenbrock Example: ")
@@ -35,7 +37,9 @@ let
    initial_x = zeros(N)
    P = precond(initial_x)
    methods = [ LBFGS(P=P), ConjugateGradient(P=P),
-         LBFGS(extrapolate=true, linesearch! = LineSearches.interpbacktrack!, P=P) ]
+         LBFGS(extrapolate=true, linesearch! = LineSearches.interpbacktrack!, P=P),
+         LBFGS(extrapolate=false, linesearch! = LineSearches.interpbacktrack!, P=P)
+         ]
 
    for (method, msg) in zip(methods, msgs)
       results = Optim.optimize(df, copy(initial_x), method=method)
@@ -56,11 +60,14 @@ let
                ConjugateGradient(P=P, precondprep! = (P, x) -> update!(P, at, x)),
                LBFGS(P=P, precondprep! = (P, x) -> update!(P, at, x),
                      extrapolate=true, linesearch! = LineSearches.interpbacktrack!),
+               LBFGS(P=P, precondprep! = (P, x) -> update!(P, at, x),
+                           extrapolate=false, linesearch! = LineSearches.interpbacktrack!),
                ConjugateGradient(P=P, precondprep! = (P, x) -> update!(P, at, x),
                               linesearch! = LineSearches.interpbacktrack!),
                       ]
     msgs = ["LBFGS Default Options: ",  "CG Default Options: ",
            "LBFGS + Backtracking + Extrapolation: ",
+           "LBFGS + Backtracking: ",
            "CG + Backtracking:  " ]
 
    objective = DifferentiableFunction( x->energy(at, x),
@@ -71,20 +78,20 @@ let
       println(msg, "g_calls = ", results.g_calls, ", f_calls = ", results.f_calls)
    end
 
-   println("--------------------------------------")
-   println("JuLIP Example with  Kumagai: ")
-   println("--------------------------------------")
-   si64 = bulk("Si", cubic=true) * 8
-   @pyimport atomistica
-   kumagai = ASECalculator(atomistica.Kumagai())
-   rattle!(si64, 0.1)
-   p = positions(si64)
-   int = ASEAtoms("Si", [(p[1] + p[2])/2])
-   si64 = extend!(si64, int)
-   set_calculator!(si64, kumagai)
-   set_constraint!(si64, FixedCell(si64))
-   X0 = positions(si64)
-   JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64), method=:auto)
-   set_positions!(si64, X0)
-   JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64), method=:lbfgs)
+   # println("--------------------------------------")
+   # println("JuLIP Example with  Kumagai: ")
+   # println("--------------------------------------")
+   # si64 = bulk("Si", cubic=true) * 8
+   # @pyimport atomistica
+   # kumagai = ASECalculator(atomistica.Kumagai())
+   # rattle!(si64, 0.1)
+   # p = positions(si64)
+   # int = ASEAtoms("Si", [(p[1] + p[2])/2])
+   # si64 = extend!(si64, int)
+   # set_calculator!(si64, kumagai)
+   # set_constraint!(si64, FixedCell(si64))
+   # X0 = positions(si64)
+   # JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64), method=:auto)
+   # set_positions!(si64, X0)
+   # JuLIP.Solve.minimise!(si64, precond=JuLIP.Preconditioners.Exp(si64), method=:lbfgs)
 end
